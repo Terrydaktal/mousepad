@@ -53,6 +53,7 @@ G_BEGIN_DECLS
 #define MOUSEPAD_SETTING_WORD_WRAP "preferences.view.word-wrap"
 #define MOUSEPAD_SETTING_MATCH_BRACES "preferences.view.match-braces"
 #define MOUSEPAD_SETTING_COLOR_SCHEME "preferences.view.color-scheme"
+#define MOUSEPAD_SETTING_MIDDLE_CLICK_PASTE "preferences.view.middle-click-paste"
 
 #define MOUSEPAD_SETTING_TOOLBAR_STYLE "preferences.window.toolbar-style"
 #define MOUSEPAD_SETTING_TOOLBAR_ICON_SIZE "preferences.window.toolbar-icon-size"
@@ -75,6 +76,8 @@ G_BEGIN_DECLS
 #define MOUSEPAD_SETTING_STATUSBAR_VISIBLE_FULLSCREEN "preferences.window.statusbar-visible-in-fullscreen"
 #define MOUSEPAD_SETTING_OLD_STYLE_MENU "preferences.window.old-style-menu"
 #define MOUSEPAD_SETTING_CLIENT_SIDE_DECORATIONS "preferences.window.client-side-decorations"
+#define MOUSEPAD_SETTING_CTRL_D_DETACH_TAB "preferences.window.ctrl-d-detach-tab"
+#define MOUSEPAD_SETTING_HIGHLIGHT_MODIFIED_TABS "preferences.window.highlight-modified-tabs"
 
 /* State setting names */
 #define MOUSEPAD_SETTING_ENABLED_PLUGINS "state.application.enabled-plugins"

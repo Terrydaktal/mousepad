@@ -101,6 +101,9 @@ struct _MousepadDocumentPrivate
   gint prev_search_state;
   guint search_id;
   gint cur_match;
+
+  /* CSS provider for unsaved modified tab title styling */
+  GtkCssProvider *css_provider;
 };
 
 
@@ -247,6 +250,7 @@ mousepad_document_init (MousepadDocument *document)
   document->priv->selection_context = NULL;
   document->priv->selection_buffer = NULL;
   document->priv->prev_search_state = INIT;
+  document->priv->css_provider = NULL;
 
   /* setup the scrolled window */
   gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (document),
@@ -295,6 +299,10 @@ mousepad_document_init (MousepadDocument *document)
                             G_CALLBACK (mousepad_document_style_label), document);
   g_signal_connect_swapped (document->textview, "notify::editable",
                             G_CALLBACK (mousepad_document_style_label), document);
+  g_signal_connect_swapped (document->buffer, "modified-changed",
+                            G_CALLBACK (mousepad_document_style_label), document);
+  MOUSEPAD_SETTING_CONNECT_OBJECT (HIGHLIGHT_MODIFIED_TABS, mousepad_document_style_label,
+                                   document, G_CONNECT_SWAPPED);
 
   /* forward some document attribute signals more or less directly */
   g_signal_connect_object (document->buffer, "notify::cursor-position",
@@ -333,6 +341,9 @@ mousepad_document_finalize (GObject *object)
       g_object_unref (document->priv->selection_context);
       g_object_unref (document->priv->selection_buffer);
     }
+
+  if (document->priv->css_provider != NULL)
+    g_object_unref (document->priv->css_provider);
 
   G_OBJECT_CLASS (mousepad_document_parent_class)->finalize (object);
 }
@@ -529,6 +540,30 @@ mousepad_document_style_label (MousepadDocument *document)
         gtk_style_context_add_class (context, GTK_STYLE_CLASS_DIM_LABEL);
       else
         gtk_style_context_remove_class (context, GTK_STYLE_CLASS_DIM_LABEL);
+
+      /* style red if modified */
+      if (gtk_text_buffer_get_modified (document->buffer)
+          && MOUSEPAD_SETTING_GET_BOOLEAN (HIGHLIGHT_MODIFIED_TABS))
+        {
+          gtk_style_context_add_class (context, "modified");
+          if (document->priv->css_provider == NULL)
+            {
+              document->priv->css_provider = gtk_css_provider_new ();
+              gtk_css_provider_load_from_data (document->priv->css_provider,
+                                               "label.modified { color: #ff0000; }", -1, NULL);
+              gtk_style_context_add_provider (context, GTK_STYLE_PROVIDER (document->priv->css_provider),
+                                              GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+            }
+        }
+      else
+        {
+          gtk_style_context_remove_class (context, "modified");
+          if (document->priv->css_provider != NULL)
+            {
+              gtk_style_context_remove_provider (context, GTK_STYLE_PROVIDER (document->priv->css_provider));
+              g_clear_object (&document->priv->css_provider);
+            }
+        }
     }
 }
 

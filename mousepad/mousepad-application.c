@@ -113,6 +113,8 @@ mousepad_application_action_update (MousepadApplication *application,
                                     gchar *key,
                                     GSettings *settings);
 static void
+mousepad_application_detach_shortcut_changed (MousepadApplication *application);
+static void
 mousepad_application_plugin_update (MousepadApplication *application);
 static void
 mousepad_application_action_whitespace (GSimpleAction *action,
@@ -233,6 +235,7 @@ static const GActionEntry dialog_actions[] = {
   { MOUSEPAD_SETTING_AUTO_INDENT, mousepad_application_toggle_activate, NULL, "false", NULL },
   { MOUSEPAD_SETTING_INDENT_ON_TAB, mousepad_application_toggle_activate, NULL, "false", NULL },
   { MOUSEPAD_SETTING_SMART_BACKSPACE, mousepad_application_toggle_activate, NULL, "false", NULL },
+  { MOUSEPAD_SETTING_MIDDLE_CLICK_PASTE, mousepad_application_toggle_activate, NULL, "false", NULL },
 
   /* "Window" tab */
   { MOUSEPAD_SETTING_CLIENT_SIDE_DECORATIONS, mousepad_application_toggle_activate, NULL, "false", NULL },
@@ -245,6 +248,8 @@ static const GActionEntry dialog_actions[] = {
   { MOUSEPAD_SETTING_ALWAYS_SHOW_TABS, mousepad_application_toggle_activate, NULL, "false", NULL },
   { MOUSEPAD_SETTING_EXPAND_TABS, mousepad_application_toggle_activate, NULL, "false", NULL },
   { MOUSEPAD_SETTING_CYCLE_TABS, mousepad_application_toggle_activate, NULL, "false", NULL },
+  { MOUSEPAD_SETTING_CTRL_D_DETACH_TAB, mousepad_application_toggle_activate, NULL, "false", NULL },
+  { MOUSEPAD_SETTING_HIGHLIGHT_MODIFIED_TABS, mousepad_application_toggle_activate, NULL, "true", NULL },
 
   /* "File" tab */
   { MOUSEPAD_SETTING_ADD_LAST_EOL, mousepad_application_toggle_activate, NULL, "false", NULL },
@@ -611,6 +616,20 @@ mousepad_application_complete_accel_map (GtkApplication *application)
 
 
 static void
+mousepad_application_detach_shortcut_changed (MousepadApplication *application)
+{
+  const gchar *accels[] = {
+    MOUSEPAD_SETTING_GET_BOOLEAN (CTRL_D_DETACH_TAB) ? "<Control>D" : NULL,
+    NULL
+  };
+
+  gtk_application_set_accels_for_action (GTK_APPLICATION (application),
+                                         "win.file.detach-tab", accels);
+}
+
+
+
+static void
 mousepad_application_set_accels (MousepadApplication *application)
 {
   GtkAccelMap *accel_map;
@@ -636,7 +655,7 @@ mousepad_application_set_accels (MousepadApplication *application)
     { "win.file.save-as", "<Control><Shift>S" },
     { "win.file.reload(false)", "F5" },
     { "win.file.print", "<Control>P" },
-    { "win.file.detach-tab", "<Control>D" },
+    { "win.file.detach-tab", "" },
     { "win.file.close-tab", "<Control>W" },
     { "win.file.close-window", "<Control><Shift>W" },
     { "app.quit", "<Control>Q" },
@@ -748,6 +767,12 @@ mousepad_application_set_accels (MousepadApplication *application)
   /* we will complete the accel map with window actions when the first window is set */
   g_signal_connect (application, "notify::active-window",
                     G_CALLBACK (mousepad_application_complete_accel_map), NULL);
+
+  /* Keep the optional detach-tab shortcut synchronized with its preference. */
+  MOUSEPAD_SETTING_CONNECT_OBJECT (CTRL_D_DETACH_TAB,
+                                   mousepad_application_detach_shortcut_changed,
+                                   application, G_CONNECT_SWAPPED);
+  mousepad_application_detach_shortcut_changed (application);
 }
 
 

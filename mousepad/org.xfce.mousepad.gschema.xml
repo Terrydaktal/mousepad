@@ -146,6 +146,11 @@
         When true auto-indentation is enabled, when false it is not.
       </description>
     </key>
+    <key name="middle-click-paste" type="b">
+      <default>false</default>
+      <summary>Paste the primary selection with the middle mouse button</summary>
+      <description>When true, middle-clicking in the editor pastes the primary selection.</description>
+    </key>
     <!-- Should be "font" or "font-desc" but left at "font-name" for backward compatibility -->
     <key name="font-name" type="s">
       <default>'Monospace 10'</default>
@@ -315,6 +320,16 @@
 
   <!-- window preferences -->
   <schema id="org.xfce.mousepad.preferences.window" path="/org/xfce/mousepad/preferences/window/">
+    <key name="ctrl-d-detach-tab" type="b">
+      <default>false</default>
+      <summary>Use Control+D to detach the current tab</summary>
+      <description>When true, Control+D moves the current document to a new window.</description>
+    </key>
+    <key name="highlight-modified-tabs" type="b">
+      <default>true</default>
+      <summary>Highlight modified tabs in red</summary>
+      <description>When true, the titles of tabs with unsaved changes are displayed in red.</description>
+    </key>
     <key name="toolbar-style" enum="org.xfce.mousepad.ToolbarStyle">
       <default>'icons'</default>
       <summary>Toolbar style</summary>

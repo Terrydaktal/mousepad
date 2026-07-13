@@ -3719,9 +3719,36 @@ mousepad_window_menu_tab_sizes_update (MousepadWindow *window)
 
 
 static void
+mousepad_window_menu_textview_reset_font (GtkWidget *widget,
+                                           gpointer data)
+{
+  GtkStyleContext *context = gtk_widget_get_style_context (widget);
+  GtkStyleProvider *old_provider = g_object_get_data (G_OBJECT (widget),
+                                                       "mousepad-menu-font-provider");
+
+  if (old_provider != NULL)
+    gtk_style_context_remove_provider (context, old_provider);
+
+  gtk_style_context_add_provider (context, GTK_STYLE_PROVIDER (data),
+                                  GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+  g_object_set_data_full (G_OBJECT (widget), "mousepad-menu-font-provider",
+                          g_object_ref (data), g_object_unref);
+
+  if (GTK_IS_CONTAINER (widget))
+    gtk_container_forall (GTK_CONTAINER (widget),
+                          mousepad_window_menu_textview_reset_font, data);
+}
+
+
+
+static void
 mousepad_window_menu_textview_shown (GtkWidget *menu,
                                      MousepadWindow *window)
 {
+  GtkCssProvider *provider;
+  PangoFontDescription *font_desc;
+  gchar *font_name, *css_font_desc, *css_string;
+
   g_return_if_fail (MOUSEPAD_IS_WINDOW (window));
 
   /* disconnect this handler */
@@ -3737,6 +3764,20 @@ mousepad_window_menu_textview_shown (GtkWidget *menu,
   /* move the textview menu children into the other menu */
   mousepad_util_container_move_children (GTK_CONTAINER (window->textview_menu),
                                          GTK_CONTAINER (menu));
+
+  /* The popup and its children otherwise inherit the zoomed text-view font. */
+  g_object_get (gtk_widget_get_settings (menu), "gtk-font-name", &font_name, NULL);
+  font_desc = pango_font_description_from_string (font_name);
+  css_font_desc = mousepad_util_pango_font_description_to_css (font_desc);
+  css_string = g_strdup_printf ("* { %s }", css_font_desc);
+  provider = gtk_css_provider_new ();
+  gtk_css_provider_load_from_data (provider, css_string, -1, NULL);
+  mousepad_window_menu_textview_reset_font (menu, provider);
+  g_object_unref (provider);
+  g_free (css_string);
+  g_free (css_font_desc);
+  pango_font_description_free (font_desc);
+  g_free (font_name);
 }
 
 

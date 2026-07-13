@@ -38,6 +38,9 @@ mousepad_view_set_property (GObject *object,
 
 /* GtkWidget virtual functions */
 static gboolean
+mousepad_view_button_press_event (GtkWidget *widget,
+                                  GdkEventButton *event);
+static gboolean
 mousepad_view_drag_motion (GtkWidget *widget,
                            GdkDragContext *context,
                            gint x,
@@ -154,6 +157,7 @@ mousepad_view_class_init (MousepadViewClass *klass)
   gobject_class->finalize = mousepad_view_finalize;
   gobject_class->set_property = mousepad_view_set_property;
 
+  widget_class->button_press_event = mousepad_view_button_press_event;
   widget_class->drag_motion = mousepad_view_drag_motion;
 
   textview_class->cut_clipboard = mousepad_view_cut_clipboard;
@@ -377,6 +381,20 @@ mousepad_view_set_property (GObject *object,
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
     }
+}
+
+
+
+static gboolean
+mousepad_view_button_press_event (GtkWidget *widget,
+                                  GdkEventButton *event)
+{
+  /* Prevent GtkTextView's middle-button PRIMARY selection paste. */
+  if (event->button == GDK_BUTTON_MIDDLE
+      && !MOUSEPAD_SETTING_GET_BOOLEAN (MIDDLE_CLICK_PASTE))
+    return TRUE;
+
+  return GTK_WIDGET_CLASS (mousepad_view_parent_class)->button_press_event (widget, event);
 }
 
 
