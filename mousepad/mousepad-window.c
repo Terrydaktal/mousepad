@@ -34,6 +34,7 @@
 #define PADDING 2
 #define MIN_FONT_SIZE 6
 #define MAX_FONT_SIZE 72
+#define NOTEBOOK_DRAG_CONTEXT_DATA "mousepad-notebook-drag-context"
 
 #define MENUBAR MOUSEPAD_SETTING_MENUBAR_VISIBLE
 #define STATUSBAR MOUSEPAD_SETTING_STATUSBAR_VISIBLE
@@ -147,6 +148,12 @@ mousepad_window_notebook_switch_page (GtkNotebook *notebook,
                                       GtkWidget *page,
                                       guint page_num,
                                       MousepadWindow *window);
+static void
+mousepad_window_notebook_drag_begin (GtkWidget *notebook,
+                                     GdkDragContext *context);
+static void
+mousepad_window_notebook_drag_end (GtkWidget *notebook,
+                                   GdkDragContext *context);
 static void
 mousepad_window_notebook_added (GtkNotebook *notebook,
                                 GtkWidget *page,
@@ -1198,6 +1205,10 @@ mousepad_window_create_notebook (MousepadWindow *window)
   /* connect signals to the notebooks */
   g_signal_connect (window->notebook, "switch-page",
                     G_CALLBACK (mousepad_window_notebook_switch_page), window);
+  g_signal_connect (window->notebook, "drag-begin",
+                    G_CALLBACK (mousepad_window_notebook_drag_begin), NULL);
+  g_signal_connect (window->notebook, "drag-end",
+                    G_CALLBACK (mousepad_window_notebook_drag_end), NULL);
   g_signal_connect (window->notebook, "page-added",
                     G_CALLBACK (mousepad_window_notebook_added), window);
   g_signal_connect (window->notebook, "page-removed",
@@ -2816,6 +2827,51 @@ mousepad_window_update_actions (MousepadWindow *window)
 
 
 static void
+mousepad_window_notebook_drag_begin (GtkWidget *notebook,
+                                     GdkDragContext *context)
+{
+  g_return_if_fail (GTK_IS_NOTEBOOK (notebook));
+  g_return_if_fail (GDK_IS_DRAG_CONTEXT (context));
+
+  /* A previous X11 drop can remain pending until GTK's five-minute abort
+   * timeout. Keep the newest context so a stale completion cannot tear down
+   * the state of a later drag. */
+  g_object_set_data_full (G_OBJECT (notebook),
+                          NOTEBOOK_DRAG_CONTEXT_DATA,
+                          g_object_ref (context),
+                          g_object_unref);
+}
+
+
+
+static void
+mousepad_window_notebook_drag_end (GtkWidget *notebook,
+                                   GdkDragContext *context)
+{
+  GdkDragContext *active_context;
+
+  g_return_if_fail (GTK_IS_NOTEBOOK (notebook));
+  g_return_if_fail (GDK_IS_DRAG_CONTEXT (context));
+
+  active_context = g_object_get_data (G_OBJECT (notebook),
+                                      NOTEBOOK_DRAG_CONTEXT_DATA);
+
+  /* GtkNotebook assumes its private drag window still exists in its default
+   * drag-end handler. Ignore delayed completions for an older context after a
+   * newer drag has already replaced or cleared that window. */
+  if (active_context != context)
+    {
+      g_signal_stop_emission_by_name (notebook, "drag-end");
+      return;
+    }
+
+  g_object_steal_data (G_OBJECT (notebook), NOTEBOOK_DRAG_CONTEXT_DATA);
+  g_object_unref (active_context);
+}
+
+
+
+static void
 mousepad_window_notebook_switch_page (GtkNotebook *notebook,
                                       GtkWidget *page,
                                       guint page_num,
@@ -4255,8 +4311,9 @@ mousepad_window_drag_data_received (GtkWidget *widget,
       /* move the tab to the correct position */
       gtk_notebook_reorder_child (GTK_NOTEBOOK (window->notebook), *document, i);
 
-      /* finish the drag (move) */
-      gtk_drag_finish (context, TRUE, TRUE, drag_time);
+      /* finish the drag without asking the source to delete the tab again: it
+       * was already detached above, as in GtkNotebook's own DND handler */
+      gtk_drag_finish (context, TRUE, FALSE, drag_time);
     }
 }
 
