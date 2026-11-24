@@ -1,0 +1,33 @@
+{
+  "schema_version": 2,
+  "basis": "Manually classified completed full-stack reconstructions from retained local reflogs and commit objects, not a count of non-fast-forward pushes. Initial historical seeds are incomplete lifetime evidence.",
+  "unknown_updates": [],
+  "confirmed_updates": [],
+  "fork_remotes": {
+    "github": "https://github.com/Terrydaktal/mousepad.git"
+  },
+  "initial_history_rewrites": 0,
+  "initial_rebases": 0,
+  "events": [],
+  "format": "UPSTREAM-forkREBASES.HISTORY_REWRITES.COMMITS-BUILD",
+  "historical_rebase_count_is_complete": false,
+  "rebase_count_basis": "No qualifying upstream-base move/port found in the retained local HEAD/branch logs and inspected provenance. Initial clone/import, fetches, same-base reconstructions and branch renames are excluded. Zero is an observed-evidence seed, not a complete lifetime claim.",
+  "rebase_evidence": [],
+  "history_rewrite_count_is_complete": false,
+  "history_rewrite_evidence": [],
+  "excluded_rewrite_observations": [],
+  "seed_audit": {
+    "reviewed_at": "2026-11-09T15:23:35.334310+00:00",
+    "previous_version_input": "0.7.0-fork0.0.0",
+    "corrected_version_input": "0.7.0-fork0.0.0",
+    "policies": {
+      "upstream_rebases": "Manually record a completed move or port to a different upstream base. Initial imports/clones and same-base history repairs do not count.",
+      "full_history_rewrites": "Manually record a deliberate completed reconstruction of the whole fork stack, including local reconstructions not yet pushed. A single-commit amendment or a suffix-only rewrite does not count. Replaying descendants is not by itself evidence of another reconstruction.",
+      "automatic_fields": "Derive COMMITS from the current first-parent stack after FORK-BASE; reserve BUILD per full source commit, starting at zero, under a shared lock.",
+      "automation": "No rebase/push hooks or reflog heuristics increment either manual counter. Repeated pushes and failed pushes do not count as additional reconstructions."
+    },
+    "oldest_retained_reflog": "2026-07-13T16:50:28+00:00",
+    "retained_reflog_records": 15,
+    "limits": "Expired logs, deleted repositories and unavailable past source cannot be recovered by this audit. Local reconstruction events and remote publication observations are not double counted."
+  }
+}

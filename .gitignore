@@ -1,0 +1,14 @@
+
+# Fork version/build outputs (source identity lives in FORK-*).
+/build/
+/BUILD-VERSION
+/BUILD-ID
+/SOURCE-VERSION
+/SOURCE-COMMIT
+/SOURCE-FILES
+/SOURCE-SHA256SUMS
+__pycache__/
+
+# Generated fork provenance and Python bytecode.
+/SOURCE-VERSION.json
+/BUILD-VERSION.json
