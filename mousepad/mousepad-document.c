@@ -551,9 +551,11 @@ mousepad_document_style_label (MousepadDocument *document)
               document->priv->css_provider = gtk_css_provider_new ();
               gtk_css_provider_load_from_data (document->priv->css_provider,
                                                "label.modified { color: #ff0000; }", -1, NULL);
-              gtk_style_context_add_provider (context, GTK_STYLE_PROVIDER (document->priv->css_provider),
-                                              GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
             }
+
+          /* Moving a tab creates a new label, which also needs this provider. */
+          gtk_style_context_add_provider (context, GTK_STYLE_PROVIDER (document->priv->css_provider),
+                                          GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
         }
       else
         {

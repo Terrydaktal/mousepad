@@ -32,6 +32,7 @@ struct _MousepadSettingsStore
   GObject parent;
 
   GSettingsBackend *backend;
+  GSettingsSchemaSource *schema_source;
   GList *roots;
   GHashTable *keys;
 };
@@ -127,6 +128,54 @@ mousepad_settings_store_class_init (MousepadSettingsStoreClass *klass)
 
 
 
+static GSettingsSchemaSource *
+mousepad_settings_store_create_schema_source (void)
+{
+  GSettingsSchemaSource *source, *local_source;
+  const gchar *schema_dir = MOUSEPAD_GSETTINGS_SCHEMA_DIR;
+  gchar *executable, *executable_dir, *compiled;
+  GError *error = NULL;
+
+  source = g_settings_schema_source_get_default ();
+  if (source != NULL)
+    g_settings_schema_source_ref (source);
+
+  /* Uninstalled binaries need the matching schema built beside them. Do not
+   * make installed binaries depend on a build directory that may still exist. */
+  executable = g_file_read_link ("/proc/self/exe", NULL);
+  if (executable != NULL)
+    {
+      executable_dir = g_path_get_dirname (executable);
+      if (g_strcmp0 (executable_dir, MOUSEPAD_BUILD_GSETTINGS_SCHEMA_DIR) == 0)
+        schema_dir = MOUSEPAD_BUILD_GSETTINGS_SCHEMA_DIR;
+      g_free (executable_dir);
+      g_free (executable);
+    }
+
+  /* GTK may already have cached the default source before Mousepad starts.
+   * Explicitly load our schema instead of relying only on an environment change. */
+  compiled = g_build_filename (schema_dir, "gschemas.compiled", NULL);
+  if (g_file_test (compiled, G_FILE_TEST_IS_REGULAR))
+    {
+      local_source = g_settings_schema_source_new_from_directory (schema_dir, source, FALSE, &error);
+      if (local_source != NULL)
+        {
+          g_clear_pointer (&source, g_settings_schema_source_unref);
+          source = local_source;
+        }
+      else
+        {
+          g_warning ("Unable to load Mousepad settings from %s: %s", schema_dir, error->message);
+          g_clear_error (&error);
+        }
+    }
+  g_free (compiled);
+
+  return source;
+}
+
+
+
 static void
 mousepad_settings_store_finalize (GObject *object)
 {
@@ -139,6 +188,7 @@ mousepad_settings_store_finalize (GObject *object)
 
   g_list_free_full (self->roots, g_object_unref);
   g_hash_table_destroy (self->keys);
+  g_clear_pointer (&self->schema_source, g_settings_schema_source_unref);
 
   G_OBJECT_CLASS (mousepad_settings_store_parent_class)->finalize (object);
 }
@@ -215,6 +265,7 @@ mousepad_settings_store_init (MousepadSettingsStore *self)
 
   self->roots = NULL;
   self->keys = g_hash_table_new_full (g_str_hash, g_str_equal, NULL, mousepad_setting_key_free);
+  self->schema_source = mousepad_settings_store_create_schema_source ();
 
   mousepad_settings_store_add_root (self, MOUSEPAD_ID);
 }
@@ -237,7 +288,9 @@ mousepad_settings_store_add_root (MousepadSettingsStore *self,
   GSettingsSchema *schema;
   GSettings *root;
 
-  source = g_settings_schema_source_get_default ();
+  source = self->schema_source;
+  if (source == NULL)
+    return;
   schema = g_settings_schema_source_lookup (source, schema_id, TRUE);
 
   /* exit silently if no schema is found: plugins may have settings or not */

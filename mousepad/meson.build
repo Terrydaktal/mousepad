@@ -56,9 +56,14 @@ libmousepad_sources += gnome.compile_resources(
   source_dir: 'resources',
 )
 
+mousepad_schemas = gnome.compile_schemas(
+  depend_files: files('org.xfce.mousepad.gschema.xml'),
+)
+
 c_args = [
   '-DG_LOG_DOMAIN="@0@"'.format('Mousepad'),
   '-DMOUSEPAD_GSETTINGS_SCHEMA_DIR="@0@"'.format(gio_schemasdir),
+  '-DMOUSEPAD_BUILD_GSETTINGS_SCHEMA_DIR="@0@"'.format(meson.current_build_dir()),
   '-DMOUSEPAD_PLUGIN_DIRECTORY="@0@"'.format(mousepad_plugin_directory),
 ]
 if get_option('keyfile-settings')
@@ -75,6 +80,7 @@ libmousepad = library(
   version: mousepad_version,
   soversion: mousepad_so_version,
   c_args: c_args,
+  link_depends: mousepad_schemas,
   include_directories: [
     include_directories('..'),
   ],
@@ -113,3 +119,23 @@ executable(
 )
 
 install_data('org.xfce.mousepad.gschema.xml', install_dir: gio_schemasdir)
+
+xvfb_run = find_program('xvfb-run', required: false)
+if xvfb_run.found()
+  modified_tabs_test = executable(
+    'test-modified-tabs',
+    '../tests/test-modified-tabs.c',
+    c_args: ['-UG_DISABLE_ASSERT', '-UG_DISABLE_CHECKS'],
+    include_directories: include_directories('..'),
+    dependencies: [glib, gtk, gtksourceview],
+    link_with: libmousepad,
+    build_by_default: false,
+  )
+  test(
+    'modified-tabs',
+    xvfb_run,
+    args: ['-a', modified_tabs_test, meson.current_source_dir() / 'org.xfce.mousepad.gschema.xml'],
+    env: ['GSETTINGS_BACKEND=memory', 'GDK_BACKEND=x11', 'NO_AT_BRIDGE=1'],
+    timeout: 30,
+  )
+endif
