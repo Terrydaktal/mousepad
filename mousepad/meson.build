@@ -136,6 +136,24 @@ if xvfb_run.found()
     xvfb_run,
     args: ['-a', modified_tabs_test, meson.current_source_dir() / 'org.xfce.mousepad.gschema.xml'],
     env: ['GSETTINGS_BACKEND=memory', 'GDK_BACKEND=x11', 'NO_AT_BRIDGE=1'],
+    is_parallel: false,
+    timeout: 30,
+  )
+  open_files_present_test = executable(
+    'test-open-files-present',
+    '../tests/test-open-files-present.c',
+    c_args: ['-UG_DISABLE_ASSERT', '-UG_DISABLE_CHECKS'],
+    include_directories: include_directories('..'),
+    dependencies: [glib, gtk, gtksourceview],
+    link_with: libmousepad,
+    build_by_default: false,
+  )
+  test(
+    'open-files-present',
+    xvfb_run,
+    args: ['-a', open_files_present_test],
+    env: ['GSETTINGS_BACKEND=memory', 'GDK_BACKEND=x11', 'NO_AT_BRIDGE=1'],
+    is_parallel: false,
     timeout: 30,
   )
 endif

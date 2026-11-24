@@ -123,7 +123,8 @@ mousepad_window_open_file (MousepadWindow *window,
                            MousepadEncoding encoding,
                            gint line,
                            gint column,
-                           gboolean must_exist);
+                           gboolean must_exist,
+                           gboolean *added_tab);
 static gboolean
 mousepad_window_close_document (MousepadWindow *window,
                                 MousepadDocument *document);
@@ -2092,7 +2093,7 @@ admin_mount_finish (GObject *file,
                                  GPOINTER_TO_INT (mousepad_object_get_data (file, "admin-mount-encoding")),
                                  GPOINTER_TO_INT (mousepad_object_get_data (file, "admin-mount-line")),
                                  GPOINTER_TO_INT (mousepad_object_get_data (file, "admin-mount-column")),
-                                 FALSE))
+                                 FALSE, NULL))
     {
       gtk_window_present (GTK_WINDOW (window));
     }
@@ -2106,7 +2107,8 @@ mousepad_window_open_file (MousepadWindow *window,
                            MousepadEncoding encoding,
                            gint line,
                            gint column,
-                           gboolean must_exist)
+                           gboolean must_exist,
+                           gboolean *added_tab)
 {
   MousepadDocument *document;
   GError *error = NULL;
@@ -2114,6 +2116,9 @@ mousepad_window_open_file (MousepadWindow *window,
   const gchar *autosave_uri;
   gint result;
   gboolean user_set_encoding, user_set_cursor, succeed;
+
+  if (added_tab != NULL)
+    *added_tab = FALSE;
 
   g_return_val_if_fail (MOUSEPAD_IS_WINDOW (window), FALSE);
   g_return_val_if_fail (file != NULL, FALSE);
@@ -2206,6 +2211,9 @@ retry:
           /* add the document to the window */
           mousepad_window_add (window, document);
 
+          if (added_tab != NULL)
+            *added_tab = TRUE;
+
           /* scroll to cursor if -l or -c is used */
           if (line != 0 || column != 0)
             g_idle_add (mousepad_view_scroll_to_cursor,
@@ -2282,30 +2290,33 @@ mousepad_window_open_files (MousepadWindow *window,
                             gint column,
                             gboolean must_exist)
 {
-  gint n_tabs_in, n_tabs_out, n, ret = -1;
+  gint n_tabs_out, n, n_opened = 0, ret = -1;
+  gboolean added_tab;
 
   g_return_val_if_fail (MOUSEPAD_IS_WINDOW (window), 0);
   g_return_val_if_fail (files != NULL, 0);
-
-  /* get the number of tabs before trying to open new files */
-  n_tabs_in = gtk_notebook_get_n_pages (GTK_NOTEBOOK (window->notebook));
 
   /* block menu updates */
   lock_menu_updates++;
 
   /* open new tabs with the files */
   for (n = 0; n < n_files; n++)
-    mousepad_window_open_file (window, files[n], encoding, line, column, must_exist);
+    {
+      if (mousepad_window_open_file (window, files[n], encoding, line, column, must_exist, &added_tab)
+          && added_tab)
+        n_opened++;
+    }
 
   /* allow menu updates again */
   lock_menu_updates--;
 
-  /* return the number of open documents, unless the window was destroyd, e.g. by "app.quit" */
+  /* return the number of newly opened documents in this window, unless the window
+   * was destroyed, e.g. by "app.quit", or still has no tabs */
   if (G_LIKELY (mousepad_is_application_window (window)))
     {
       n_tabs_out = gtk_notebook_get_n_pages (GTK_NOTEBOOK (window->notebook));
       if (n_tabs_out > 0)
-        ret = n_tabs_out - n_tabs_in;
+        ret = n_opened;
     }
 
   return ret;
@@ -4645,7 +4656,7 @@ mousepad_window_action_open_recent (GSimpleAction *action,
   /* try to open the file */
   uri = g_variant_get_string (value, NULL);
   file = g_file_new_for_uri (uri);
-  succeed = mousepad_window_open_file (data, file, mousepad_encoding_get_default (), 0, 0, TRUE);
+  succeed = mousepad_window_open_file (data, file, mousepad_encoding_get_default (), 0, 0, TRUE, NULL);
   g_object_unref (file);
 
   /* update the recent history, don't both the user if this fails */
